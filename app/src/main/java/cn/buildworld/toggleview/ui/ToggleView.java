@@ -7,6 +7,7 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
+import android.view.MotionEvent;
 import android.view.View;
 
 /**
@@ -34,6 +35,7 @@ public class ToggleView extends View {
     private Bitmap decodeResource;
     private  Paint paint;
     private boolean mSwitchState = false; // 开关状态, 默认false
+    private float currentX;
     /**
      * 用于代码创建控件
      * @param context
@@ -62,6 +64,16 @@ public class ToggleView extends View {
     public ToggleView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         init();
+
+        //自定义，为了在xml中直接使用图片资源
+//        String namespace = "http://schemas.android.com/apk/res/cn.buildworld.toggleview";
+//        int switch_background = attrs.getAttributeResourceValue(namespace, "switch_background", -1);
+//        int slide_background = attrs.getAttributeResourceValue(namespace, "slide_background", -1);
+//        mSwitchState = attrs.getAttributeBooleanValue(namespace,"switch_background",false);
+//
+//        System.out.println("slide_background"+slide_background);
+//        setSwitchBackgroundResouce(switch_background);
+//        setSlideButtonResouce(slide_background);
     }
 
 
@@ -112,13 +124,83 @@ public class ToggleView extends View {
         canvas.drawBitmap(switchBitmap,0,0,paint);
 
         //2、滑块
-        if (mSwitchState){//开
+        //根据当前用户触摸到的位置滑块
 
-            int newLeft = switchBitmap.getWidth() - decodeResource.getWidth();
+        if (isTouchMode){
+            float newLeft = currentX -decodeResource.getWidth() /2.0f;
+
+            int maxLeft = switchBitmap.getWidth() - decodeResource.getWidth();
+
+            if (newLeft <0){
+                newLeft = 0;//左边范围
+            }else if (newLeft >maxLeft){
+                newLeft = maxLeft;//右边范围
+            }
             canvas.drawBitmap(decodeResource,newLeft,0,paint);
-        }else {//关
-            canvas.drawBitmap(decodeResource,0,0,paint);
         }
+        else {
+            //根据开关状态，直接设置图片位置
+            if (mSwitchState) {//开
+                int newLeft = switchBitmap.getWidth() - decodeResource.getWidth();
+                canvas.drawBitmap(decodeResource, newLeft, 0, paint);
+            } else {//关
+                canvas.drawBitmap(decodeResource, 0, 0, paint);
+            }
+        }
+    }
+
+    boolean isTouchMode = false;
+    //重写触摸事件，响应用户的触摸
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        switch (event.getAction()){
+            case MotionEvent.ACTION_DOWN:
+                isTouchMode = true;
+                System.out.println("event: ACTION_DOWN: " + event.getX());
+                currentX = event.getX();
+                break;
+            case MotionEvent.ACTION_MOVE:
+                System.out.println("event: ACTION_MOVE: " + event.getX());
+                currentX = event.getX();
+                break;
+            case MotionEvent.ACTION_UP:
+                isTouchMode = false;
+                System.out.println("event: ACTION_UP: " + event.getX());
+                currentX = event.getX();
+
+                float center = switchBitmap.getWidth() /2.0f;
+
+                //根据当前按下的位置，和控件中心的位置进行比较
+                boolean state = currentX >center;
+
+                //当状态发生改变，就会通知主界面
+                if (state != mSwitchState && onSwitchStateUpdateListener != null){
+                    onSwitchStateUpdateListener.onStateUpdate(state);
+                }
+
+                mSwitchState = state;
+
+                break;
+            default:
+                break;
+        }
+
+        invalidate();//会引发onDraw被调用，里边的变量会重新生效.界面会更新
+        return true;
+    }
+
+
+    //设置监听状态
+
+    private OnSwitchStateUpdateListener onSwitchStateUpdateListener;
+    public interface OnSwitchStateUpdateListener {
+        //状态回调，把当前状态传送出去
+        void onStateUpdate(boolean staet);
+    }
+
+    public void setOnSwitchStateUpdateListener(OnSwitchStateUpdateListener onSwitchStateUpdateListener){
+        this.onSwitchStateUpdateListener = onSwitchStateUpdateListener;
 
     }
 }

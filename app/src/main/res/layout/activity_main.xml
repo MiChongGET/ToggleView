@@ -5,11 +5,13 @@
     android:layout_height="match_parent"
     tools:context="cn.buildworld.toggleview.MainActivity">
 
+
     <cn.buildworld.toggleview.ui.ToggleView
         android:id="@+id/toggle"
         android:layout_centerInParent="true"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+
         />
 
 </RelativeLayout>
